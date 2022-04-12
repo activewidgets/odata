@@ -51,12 +51,12 @@ function defineOperations(url, send){
 }
 
 
-function convertParams({limit, offset, sort, filter}){
+function convertParams({limit, offset, orderBy, where}){
     return {
         $top: limit,
         $skip: offset,
-        $orderby: sort,
-        $filter: convertFilter(filter, format),
+        $orderby: orderBy,
+        $filter: convertFilter(where, format),
         $count: true,
         $format: 'json'
     };

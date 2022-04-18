@@ -4,18 +4,56 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {http, data, params, operations, convertFilter} from '@activewidgets/options';
+import {http, data, params, operations, convertSort, convertFilter} from '@activewidgets/options';
+import {like, literal} from './like.js';
 
-let ops = {
-    '=': 'eq',
-    '>': 'gt',
-    '<': 'lt',
-    '>=': 'ge',
-    '<=': 'le'
+const operators = {
+
+    /* equality */
+    '=': ' eq ',
+    '<>': ' ne ',
+    '!=': ' ne ',
+
+    /* comparison */
+    '<': ' lt ',
+    '>': ' gt ',
+    '<=': ' le ',
+    '>=': ' ge ',
+
+    /* text */
+    'LIKE': 'like',
+    'ILIKE': 'ilike',
+
+    /* logical */
+    'NOT': 'not ',
+    'AND': ' and ',
+    'OR': ' or '
 };
 
-let format = {
-    compare: (path, op, value) => path.join('/') + ' ' + ops[op] + ' ' + (typeof value == 'string' ? "'" + value + "'": value)
+const formatting = {
+    equality: (name, operator, value) => name + operator + literal(value),
+    comparison: (name, operator, value) => name + operator + literal(value),
+    text: (name, operator, pattern) => like(name, operator, pattern),
+    logical: (operator, expr) => operator == 'not ' ? `not (${expr})` : `(${expr.join(operator)})`
+};
+
+function sortExpr(name, direction){
+    return `${name} ${direction}`;
+}
+
+function mergeAll(items){
+    return items.join();
+}
+
+function convertParams({where, orderBy, limit, offset}){
+    return {
+        $filter: convertFilter(where, operators, formatting, '/'),
+        $orderby: convertSort(orderBy, sortExpr, mergeAll, '/'),
+        $top: limit,
+        $skip: offset,
+        $count: true,
+        $format: 'json'
+    };
 }
 
 
@@ -48,18 +86,6 @@ function defineOperations(url, send){
     }
 
     return {insertRow, updateRow, deleteRow};
-}
-
-
-function convertParams({limit, offset, orderBy, where}){
-    return {
-        $top: limit,
-        $skip: offset,
-        $orderby: orderBy,
-        $filter: convertFilter(where, format),
-        $count: true,
-        $format: 'json'
-    };
 }
 
 
